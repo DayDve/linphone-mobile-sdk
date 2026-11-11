@@ -1925,8 +1925,8 @@ void MainDbPrivate::updateConferenceChatMessageEvent(const shared_ptr<EventLog> 
 		static const string query =
 		    "SELECT chat_message_participant.state FROM chat_message_participant WHERE event_id = :eventId AND "
 		    "chat_message_participant.participant_sip_address_id = :meAddressId";
-		soci::rowset<soci::row> rows =
-		    (session->prepare << query, soci::use(chatMessage->getStorageId()), soci::use(meAddressId));
+		const long long msgStorageId = chatMessage->getStorageId();
+		soci::rowset<soci::row> rows = (session->prepare << query, soci::use(msgStorageId), soci::use(meAddressId));
 		ChatMessage::State meParticipantState = ChatMessage::State::Idle;
 		for (const auto &row : rows) {
 			meParticipantState = static_cast<ChatMessage::State>(row.get<int>(0));
@@ -1949,7 +1949,8 @@ void MainDbPrivate::updateConferenceChatMessageEvent(const shared_ptr<EventLog> 
 		                            " FROM sip_address, chat_message_participant"
 		                            " WHERE event_id = :eventId"
 		                            " AND sip_address.id = chat_message_participant.participant_sip_address_id";
-		soci::rowset<soci::row> rows = (session->prepare << query, soci::use(chatMessage->getStorageId()));
+		const long long msgStorageId = chatMessage->getStorageId();
+		soci::rowset<soci::row> rows = (session->prepare << query, soci::use(msgStorageId));
 
 		// Use list of participants the client is sure have received the message and not the actual list of participants
 		// being part of the chatroom
@@ -5241,10 +5242,11 @@ list<shared_ptr<ChatMessage>> MainDb::getEphemeralMessages() const {
 		L_D();
 		list<shared_ptr<ChatMessage>> chatMessages;
 		auto epoch = d->dbSession.getTimeWithSociIndicator(0);
+		const int maxTasks = EPHEMERAL_MESSAGE_TASKS_MAX_NB;
 		soci::rowset<soci::row> rows =
 		    getBackend() == MainDb::Backend::Sqlite3
 		        ? (d->dbSession.getBackendSession()->prepare << query, soci::use(epoch.first),
-		           soci::use(EPHEMERAL_MESSAGE_TASKS_MAX_NB))
+		           soci::use(maxTasks))
 		        : (d->dbSession.getBackendSession()->prepare << query, soci::use(epoch.first));
 		for (const auto &row : rows) {
 			const long long &dbChatRoomId = d->dbSession.resolveId(row, (int)row.size() - 1);
@@ -6231,8 +6233,9 @@ list<shared_ptr<EventLog>> MainDb::getHistoryRangeNear(const ConferenceId &confe
 			MainDbKeyPrivate *dEventKey = static_cast<MainDbKey &>(dEventLog->dbKey).getPrivate();
 			const long long &dbEventId = dEventKey->storageId;
 
+			const unsigned int beforeN = before + 1, afterN = after + 1;
 			soci::rowset<soci::row> rows = (d->dbSession.getBackendSession()->prepare << query, soci::use(dbChatRoomId),
-			                                soci::use(dbEventId), soci::use(before + 1), soci::use(after + 1));
+			                                soci::use(dbEventId), soci::use(beforeN), soci::use(afterN));
 
 			for (const auto &row : rows) {
 				shared_ptr<EventLog> event = d->selectGenericConferenceEvent(chatRoom, row);

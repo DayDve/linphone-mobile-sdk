@@ -286,7 +286,9 @@ void LdapContactProvider::initializeLdap() {
 			    mConfig["server"][mConfigServerIndex].c_str()); // mServer are results of sal. Use the root urls.
 			const char *cHost = belle_generic_uri_get_host(serverUri);
 			std::string hostname = L_C_TO_STRING(cHost);
+#ifdef LDAP_OPT_X_TLS_PEER_CN // Belledonne openldap extension
 			ldap_set_option(mLd, LDAP_OPT_X_TLS_PEER_CN, &hostname[0]);
+#endif
 			if (serverUri) belle_sip_object_unref(serverUri);
 		}
 		mTlsConnectionId = -1;
