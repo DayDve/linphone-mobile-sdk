@@ -736,6 +736,8 @@ if(BUILD_LIBOQS)
 		message(MESSAGE "CMAKE_CROSSCOMPILING :" ${CMAKE_CROSSCOMPILING})
 		set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # Prevent project from overriding the options we just set here
 		add_subdirectory("external/liboqs")
+		# oqs/oqsconfig.h is generated in the build tree: consumers built in this tree need it
+		target_include_directories(oqs PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/external/liboqs/include>")
 		add_dependencies(sdk oqs)
 	endfunction()
 	add_liboqs()
